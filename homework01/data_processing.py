@@ -1,27 +1,24 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from sklearn import preprocessing, neighbors, tree, naive_bayes, svm
-from sklearn.ensemble import BaggingClassifier, RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
+import numpy as np
+import scipy.stats
 from sklearn.model_selection import KFold
-from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, auc
-from sklearn.preprocessing import label_binarize
+from sklearn import preprocessing, tree, svm, neural_network, neighbors
+from sklearn.metrics import confusion_matrix, precision_recall_curve, roc_curve
 
 
 class DataProcess:
-    file_name = './db/iris.data'
-    n_feature = 4
-    n_classes = 0
+    file_name = './db/haberman.data'
+    n_feature = 3
     n_splits = 10
     clfs = {
-        'K_neighbor': neighbors.KNeighborsClassifier(),
-        'decision_tree': tree.DecisionTreeClassifier(),
-        'naive_gaussian': naive_bayes.GaussianNB(),
-        'svm': svm.SVC(),
-        'bagging_knn': BaggingClassifier(neighbors.KNeighborsClassifier(), max_samples=0.5, max_features=0.5),
-        'bagging_tree': BaggingClassifier(tree.DecisionTreeClassifier(), max_samples=0.5, max_features=0.5),
-        'random_forest': RandomForestClassifier(n_estimators=50),
-        'adaboost': AdaBoostClassifier(n_estimators=50),
-        'gradient_boost': GradientBoostingClassifier(n_estimators=50, learning_rate=1.0, max_depth=1, random_state=0)
+        'decisionTree': tree.DecisionTreeClassifier(criterion='entropy', max_depth=None, min_samples_split=2,
+                                                    min_samples_leaf=1, max_features=None, max_leaf_nodes=None,
+                                                    min_impurity_decrease=0),
+        'svm': svm.SVC(C=1.0, kernel='rbf', gamma='auto'),
+        'neural_network': neural_network.MLPClassifier(activation='tanh', solver='adam', alpha=0.0001,
+                                                       learning_rate='adaptive', learning_rate_init=0.001,
+                                                       max_iter=200),
+        'KNeighbors': neighbors.KNeighborsClassifier(n_neighbors=5, n_jobs=1)
     }
 
     def get_dataset(self):
@@ -32,9 +29,8 @@ class DataProcess:
         for x_str in data_str:
             data.append([float(x) for x in x_str])
         data = np.array(data)
-        # Binarize the output
-        target = label_binarize(target, classes=[0, 1, 2])
-        self.n_classes = target.shape[1]
+        target = [int(x) - 1 for x in target]
+        target = np.array(target)
         return data, target
 
     @staticmethod
@@ -54,67 +50,55 @@ class DataProcess:
         # Learn to predict each class against the other
         clf = self.clfs['svm']
         clf.fit(x_train, y_train)
+        y_pred = clf.predict(x_test)
         y_score = clf.decision_function(x_test)
-        return y_score
+        # print(y_score)
+        # exit(0)
+        score = clf.score(x_test, y_test)
+        return y_pred, y_score, score
 
-    def draw_pr(self, y_test, y_score):
-        precision = dict()
-        recall = dict()
-        average_precision = dict()
-        for i in range(self.n_classes):
-            precision[i], recall[i], _ = precision_recall_curve(y_test[:, i], y_score[:, i])
-            average_precision[i] = average_precision_score(y_test[:, i], y_score[:, i])
-        precision['macro'], recall['macro'], _ = precision_recall_curve(y_test.ravel(), y_score.ravel())
-        average_precision['macro'] = average_precision_score(y_test, y_score, average='macro')
-        print('Average precision score, macro-averaged over all classes: {0:0.2f}'.format(average_precision["macro"]))
+    @staticmethod
+    def draw_pr(y_test, y_score):
+        precision, recall, _ = precision_recall_curve(y_test, y_score)
+        # average_precision = average_precision_score(y_test, y_score)
+        # f1 = 2 * precision * recall / (precision + recall)
+
         plt.figure()
-        # plt.subplot(1, 3, iter_)
-        # iter_ += 1
-        plt.step(recall['macro'], precision['macro'], where='post')
-        # plt.fill_between(recall, precision, step='post', color='b', alpha=0.2)
-        plt.xlabel('Recall')
-        plt.ylabel('Precision')
+        plt.step(recall, precision, where='post')
+        plt.fill_between(recall, precision, step='post')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
-        plt.title('Average precision score, macro-averaged over all classes: AP={0:0.3f}'
-                  .format(average_precision["macro"]))
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.title('P-R')
         plt.show()
 
-    def draw_roc(self, y_test, y_score):
-        # Compute ROC curve and ROC area for each class
-        fpr = dict()
-        tpr = dict()
-        roc_auc = dict()
-        for i in range(self.n_classes):
-            fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_score[:, i])
-            roc_auc[i] = auc(fpr[i], tpr[i])
-        # Compute micro-average ROC curve and ROC area
-        fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), y_score.ravel())
-        roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+    @staticmethod
+    def draw_roc(y_test, y_score):
+        fpr, tpr, _ = roc_curve(y_test, y_score)
+        # roc_auc = auc(fpr, tpr)
+
         plt.figure()
-        # plt.subplot(1, 3, iter_)
-        # iter_ += 1
-        lw = 1
-        colors = ['blue', 'red', 'green', 'black', 'yellow']
-        for i, color in zip(range(self.n_classes), colors):
-            plt.plot(fpr[i], tpr[i], color=color, lw=lw, label='ROC curve of class {0} (area = {1:0.3f})'
-                     .format(i, roc_auc[i]))
-        plt.plot([0, 1], [0, 1], 'k--', lw=lw)
+        plt.step(fpr, tpr, where='post')
+        plt.fill_between(fpr, tpr, step='post')
         plt.xlim([-0.05, 1.0])
         plt.ylim([0.0, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('Receiver operating characteristic for multi-class data')
-        plt.legend(loc="lower right")
+        plt.title('ROC')
         plt.show()
 
     def run(self):
         data, target = self.get_dataset()
         data = self.preprocessing(data)
         split_results = self.split(data, target)
+        score = 0.
         for x_train, x_test, y_train, y_test in split_results:
-            y_score = self.classifier(x_train, y_train, x_test, y_test)
-            print(y_score)
-            # self.draw_pr(y_test, y_score)
-            # self.draw_roc(y_test, y_score)
-            exit(0)
+            y_pred, y_score, score_i = self.classifier(x_train, y_train, x_test, y_test)
+            # target_names = ['1', '2']
+            confusion_matrix(y_test, y_pred)
+            self.draw_pr(y_test, y_score)
+            self.draw_roc(y_test, y_score)
+            score += score_i
+        score /= self.n_splits
+        print('cross_val_score: {}'.format(score))
