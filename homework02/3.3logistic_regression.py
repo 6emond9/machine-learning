@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 class LogisticRegression:
     # local dataset
-    file_name = './resources/3.0xigua.txt'
+    file_name = 'db/3.0xigua.txt'
 
     def load_dataset(self):
         """
@@ -59,7 +59,7 @@ class LogisticRegression:
         z = np.dot(data_array, beta)
         old_l = 0
         new_l_mat = -label_array * z + np.log(1 + self.sigmoid(z))
-        new_l = np.sum(new_l_mat)
+        new_l = np.nansum(new_l_mat)
         iter_ = 0
         while abs(old_l - new_l) > 1e-5:
             iter_ += 1
@@ -72,7 +72,7 @@ class LogisticRegression:
             # shape (m,n)
             d_beta_mat = -data_array * (label_array - py1)
             # first derivative with shape (1, n)
-            d_beta = np.sum(d_beta_mat, axis=0, keepdims=True)
+            d_beta = np.nansum(d_beta_mat, axis=0, keepdims=True)
             # second derivative with shape (n, n)
             d_beta2 = data_array.T.dot(p).dot(data_array)
             d_beta2_inv = np.linalg.inv(d_beta2)
@@ -82,7 +82,7 @@ class LogisticRegression:
             z = np.dot(data_array, beta)
             old_l = new_l
             new_l_mat = -data_array * z + np.log(1 + self.sigmoid(z))
-            new_l = np.sum(new_l_mat)
+            new_l = np.nansum(new_l_mat)
 
             pre = self.predict(data_array, beta)
             error_rate = self.cal_error_rate(label_array, pre)
