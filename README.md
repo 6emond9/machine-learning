@@ -6,6 +6,6 @@
 
 ## homework02
 
-- [3.3 logistic_regression.py](homework02/h3_3logistic_regression.py)
+- [3.3 logistic_regression](homework02/h3_3logistic_regression.py)
 - [3.4](homework02/h3_4.py)
-- [3.5 LDA.py](homework02/h3_5LDA.py)
+- [3.5 LDA](homework02/h3_5LDA.py)
