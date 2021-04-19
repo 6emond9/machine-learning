@@ -1,7 +1,7 @@
 """
 依据基尼指数划分生成决策树
 """
-import h4_3tree_generate
+from h4_3tree_generate import Node, load_dataset, is_same_value, choose_largest_example
 import plot_tree
 
 # 离散属性
@@ -18,21 +18,6 @@ label_keys = {'好瓜': ['是', '否']}
 
 # 全局变量——当前结点深度
 depth = 0
-root = None
-test = None
-
-
-# 结点类
-class Node(object):
-    def __init__(self):
-        # 结点在决策树的深度
-        self.depth = 0
-        # 结点文本内容
-        self.value = ''
-        # 结点向下分支[str1, str2 ... ]
-        self.branch = []
-        # 结点的子结点[Node1, Node2, ... ]
-        self.children = []
 
 
 def cal_gini(D):
@@ -42,12 +27,12 @@ def cal_gini(D):
     :return: 基尼值
     """
     gini = 1.
-    keys = label_keys['好瓜']
+    keys = label_keys[tuple(label_keys.keys())[0]]
     # 空数据集
     if D.shape[0] == 0:
         return gini
 
-    count = D['好瓜'].value_counts()
+    count = D[tuple(label_keys.keys())[0]].value_counts()
     num = D.shape[0]
 
     for key in keys:
@@ -123,12 +108,12 @@ def cal_accuracy(node, test_data):
     for i in range(count):
         data = test_data.iloc[i].copy()
         pre = decide_tree_predict(node, data)
-        if data['好瓜'] == pre:
+        if data[tuple(label_keys.keys())[0]] == pre:
             num += 1
     return num / count
 
 
-def tree_generate_by_gini(D, A, last_accuracy):
+def tree_generate_by_gini(D, A):
     """
     递归生成决策树
     返回情形：
@@ -137,10 +122,9 @@ def tree_generate_by_gini(D, A, last_accuracy):
     3.当前结点包含的样本集合为空，不可划分
     :param D: 数据集
     :param A: 属性集
-    :param last_accuracy: 验证集到父结点正确率
     :return: 结点
     """
-    global depth, root, test
+    global depth
 
     # 生成结点
     node = Node()
@@ -150,20 +134,20 @@ def tree_generate_by_gini(D, A, last_accuracy):
     if node.depth == 1:
         root = node
 
-    value_count = D['好瓜'].value_counts()
+    value_count = D[tuple(label_keys.keys())[0]].value_counts()
     # 1.当前结点包含的样本全属于一个类别
     if len(value_count) == 1:
         node.value = '好瓜' if D['好瓜'].values[0] == '是' else '坏瓜'
         return node
 
     # 2.当前属性值为空，或是所有样本在所有属性值上取值相同，无法划分
-    if len(A) == 0 or h4_3tree_generate.is_same_value(D, A):
-        node.value = h4_3tree_generate.choose_largest_example(D)
+    if len(A) == 0 or is_same_value(D, A):
+        node.value = choose_largest_example(D)
         return node
 
     # 选取最优化分属性
     best_attr = choose_best_attribute_by_gini(D, A)
-    print('%d\t%s' % (node.depth, best_attr))
+    # print('%d\t%s' % (node.depth, best_attr))
 
     # 1.未剪枝
     # 最优划分属性为离散属性时
@@ -174,71 +158,83 @@ def tree_generate_by_gini(D, A, last_accuracy):
         if Dv.shape[0] == 0:
             tmp_node = Node()
             tmp_node.depth = depth + 1
-            tmp_node.value = h4_3tree_generate.choose_largest_example(D)
+            tmp_node.value = choose_largest_example(D)
             node.branch.append(value)
             node.children.append(tmp_node)
             return node
         else:
             Av = [key for key in A if key != node.value]
             node.branch.append(value)
-            node.children.append(tree_generate_by_gini(Dv, Av, 0.))
+            node.children.append(tree_generate_by_gini(Dv, Av))
             depth -= 1
-
-    # # 2.预剪枝
-    # # 最优划分属性为离散属性时
-    # node.value = best_attr
-    # for value in discrete_keys[best_attr]:
-    #     Dv = D.loc[D[best_attr] == value].copy()
-    #     tmp_node = Node()
-    #     tmp_node.depth = depth + 1
-    #     # 3.当前结点包含的样本集合为空，不可划分
-    #     if Dv.shape[0] == 0:
-    #         tmp_node.value = h4_3tree_generate.choose_largest_example(D)
-    #     else:
-    #         tmp_node.value = h4_3tree_generate.choose_largest_example(Dv)
-    #     node.branch.append(value)
-    #     node.children.append(tmp_node)
-    #
-    # accuracy = cal_accuracy(root, test)
-    # print(last_accuracy)
-    # print(accuracy)
-    #
-    # if accuracy > last_accuracy:
-    #     for i in range(len(node.children)):
-    #         Dv = D.loc[D[best_attr] == node.branch[i]].copy()
-    #         Av = [key for key in A if key != node.value]
-    #         if Dv.shape[0] != 0:
-    #             node.children[i] = tree_generate_by_gini(Dv, Av, accuracy)
-    #             depth -= 1
-    # else:
-    #     node.value = h4_3tree_generate.choose_largest_example(D)
-    #     node.branch.clear()
-    #     node.children.clear()
 
     return node
 
 
-def post_reduce_branch(node, D, pre_accuracy):
+def pre_reduce_branch(node, D, pre_accuracy, root, test):
+    """
+    决策树预剪枝
+    :param node: 决策树结点
+    :param D: 训练集
+    :param pre_accuracy: 剪枝前准确度
+    :param root: 决策树根结点
+    :param test: 验证集
+    :return: 决策树结点
+    """
+    if node.value == '好瓜' or node.value == '坏瓜':
+        return node
+
+    node_value = []
+    for i in range(len(node.children)):
+        node_value.append(node.children[i].value)
+        Dv = D.loc[D[node.value] == node.branch[i]].copy()
+        node.children[i].value = choose_largest_example(Dv)
+
+    accuracy = cal_accuracy(root, test)
+    # print(last_accuracy)
+    # print(accuracy)
+
+    if accuracy > pre_accuracy:
+        for i in range(len(node.children)):
+            node.children[i].value = node_value[i]
+    else:
+        node.value = choose_largest_example(D)
+        node.branch.clear()
+        node.children.clear()
+        # print('%d\t%s' % (node.depth, node.value))
+        # print(pre_accuracy)
+        # print(accuracy)
+        return node
+
+    for i in range(len(node.children)):
+        Dv = D.loc[D[node.value] == node.branch[i]].copy()
+        node.children[i] = pre_reduce_branch(node.children[i], Dv, accuracy, root, test)
+
+    return node
+
+
+def post_reduce_branch(node, D, pre_accuracy, root, test):
     """
     决策树后剪枝
     :param node: 决策树结点
     :param D: 训练集
     :param pre_accuracy: 剪枝前准确度
+    :param root: 决策树根结点
+    :param test: 验证集
     :return: 决策树结点, 剪枝后准确度
     """
-    global root, test
     for i in range(len(node.children)):
         if node.branch[i] != '好瓜' and node.branch[i] != '坏瓜':
             Dv = D.loc[D[node.value] == node.branch[i]].copy()
-            node.children[i], pre_accuracy = post_reduce_branch(node.children[i], Dv, pre_accuracy)
+            node.children[i], pre_accuracy = post_reduce_branch(node.children[i], Dv, pre_accuracy, root, test)
 
     value_tmp = node.value
-    node.value = h4_3tree_generate.choose_largest_example(D)
+    node.value = choose_largest_example(D)
     accuracy = cal_accuracy(root, test)
     if accuracy > pre_accuracy:
-        print('%d\t%s' % (node.depth, value_tmp))
-        print(pre_accuracy)
-        print(accuracy)
+        # print('%d\t%s' % (node.depth, value_tmp))
+        # print(pre_accuracy)
+        # print(accuracy)
         node.branch.clear()
         node.children.clear()
         pre_accuracy = accuracy
@@ -250,14 +246,24 @@ def post_reduce_branch(node, D, pre_accuracy):
 
 if __name__ == '__main__':
     file = './db/4.2data.txt'
-    dataset = h4_3tree_generate.load_dataset(file)
+    dataset = load_dataset(file)
     dataset.drop(columns=['编号'], inplace=True)
-    attr = [column for column in dataset.columns if column != '好瓜']
+    attr = [column for column in dataset.columns if column != tuple(label_keys.keys())[0]]
     train = dataset.iloc[:10].copy()
     test = dataset.iloc[10:].copy()
-    root = tree_generate_by_gini(train, attr, 0.)
-    tree_accuracy = cal_accuracy(root, test)
-    print('=' * 18)
-    # 3.后剪枝
-    root, last_accuracy = post_reduce_branch(root, train, tree_accuracy)
+    root = tree_generate_by_gini(train, attr)
+
+    # # 2.预剪枝
+    # print('=' * 18)
+    # tmp = root.value
+    # root.value = choose_largest_example(train)
+    # tree_accuracy = cal_accuracy(root, test)
+    # root.value = tmp
+    # root = pre_reduce_branch(root, train, tree_accuracy, root, test)
+
+    # # 3.后剪枝
+    # print('=' * 18)
+    # tree_accuracy = cal_accuracy(root, test)
+    # root, last_accuracy = post_reduce_branch(root, train, tree_accuracy, root, test)
+
     plot_tree.plot_tree(root)

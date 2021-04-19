@@ -65,7 +65,7 @@ def choose_largest_example(D):
     :param D: 数据集
     :return: 最多类
     """
-    count = D['好瓜'].value_counts()
+    count = D[tuple(label_keys.keys())[0]].value_counts()
     if len(count) == 0:
         return
     elif len(count) == 1:
@@ -81,12 +81,12 @@ def cal_ent(D):
     :return: 信息熵
     """
     ent = 0.
-    keys = label_keys['好瓜']
+    keys = label_keys[tuple(label_keys.keys())[0]]
     # 空数据集
     if D.shape[0] == 0:
         return ent
 
-    count = D['好瓜'].value_counts()
+    count = D[tuple(label_keys.keys())[0]].value_counts()
     num = D.shape[0]
 
     for key in keys:
@@ -193,10 +193,10 @@ def tree_generate_by_gain(D, A):
     # 生成结点
     node = Node()
     node.depth = depth
-    value_count = D['好瓜'].value_counts()
+    value_count = D[tuple(label_keys.keys())[0]].value_counts()
     # 1.当前结点包含的样本全属于一个类别
     if len(value_count) == 1:
-        node.value = '好瓜' if D['好瓜'].values[0] == '是' else '坏瓜'
+        node.value = '好瓜' if D[tuple(label_keys.keys())[0]].values[0] == '是' else '坏瓜'
         return node
 
     # 2.当前属性值为空，或是所有样本在所有属性值上取值相同，无法划分
@@ -210,7 +210,8 @@ def tree_generate_by_gain(D, A):
 
     # 最优划分属性为离散属性时
     if best_attr in discrete_keys:
-        node.value = best_attr + '=?'
+        # node.value = best_attr + '=?'
+        node.value = best_attr
         for value in discrete_keys[best_attr]:
             Dv = D.loc[D[best_attr] == value].copy()
             # 3.1当前结点包含的样本集合为空，不可划分
@@ -228,7 +229,8 @@ def tree_generate_by_gain(D, A):
                 depth -= 1
     # 最优划分属性为连续属性时
     else:
-        node.value = best_attr + '<=' + str(round(partition, 3))
+        # node.value = best_attr + '<=' + str(round(partition, 3))
+        node.value = best_attr
 
         left = D.loc[D[best_attr] <= partition].copy()
         # 3.2当前结点包含的样本集合为空，不可划分
@@ -257,7 +259,6 @@ def tree_generate_by_gain(D, A):
             node.branch.append('否')
             node.children.append(tree_generate_by_gain(right, A))
             depth -= 1
-
     return node
 
 
@@ -265,7 +266,7 @@ if __name__ == '__main__':
     file = './db/4.3data.txt'
     dataset = load_dataset(file)
     dataset.drop(columns=['编号'], inplace=True)
-    attribute = [column for column in dataset.columns if column != '好瓜']
+    attribute = [column for column in dataset.columns if column != tuple(label_keys.keys())[0]]
     # 测试连续属性信息增益
     # print(cal_gain_continuous(dataset, '密度'))
     # print(cal_gain_continuous(dataset, '含糖率'))

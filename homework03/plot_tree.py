@@ -96,6 +96,9 @@ def dfs_tree(node, branch=''):
     global node_x, node_y, leaf_node_x, leaf_node_y, total_w, total_d, parent_node
     num_w = get_num_leaves(node) - 1
 
+    if total_w == 0.:
+        plot_node(node.value, (0.5, 0.5), (0.5, 0.5), leaf_node)
+        return
     # 叶结点
     if node.value == '好瓜' or node.value == '坏瓜':
         plot_mid_text((leaf_node_x, node_y), parent_node[-1], branch)
