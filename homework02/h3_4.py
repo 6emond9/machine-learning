@@ -28,7 +28,7 @@ def logistic_regression1():
         error_rate2 += LogisticRegression().cal_error_rate(label_array[test_index], pre_label)
     error_rate2 /= data_array.shape[0]
 
-    print('数据集:\ttransfusion.data')
+    print('数据集:\ttransfusion.data_6_2.txt')
     print("10次10折交叉验证-错误率:\t%f" % error_rate1)
     print("留一法-错误率:\t%f" % error_rate2)
 
@@ -59,7 +59,7 @@ def logistic_regression2():
         error_rate2 += LogisticRegression().cal_error_rate(label_array[test_index], pre_label)
     error_rate2 /= data_array.shape[0]
 
-    print('数据集:\thaberman.data')
+    print('数据集:\thaberman.data_6_2.txt')
     print("10次10折交叉验证-错误率:\t%f" % error_rate1)
     print("留一法-错误率:\t%f" % error_rate2)
 

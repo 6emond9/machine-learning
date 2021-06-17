@@ -22,7 +22,7 @@ class LDA:
         """
         LDA 线性判别分析
         :param data_array: input feature array with shape (m, n)
-        :param label_array: the label of data set with shape (m, 1)
+        :param label_array: the label of data_6_2.txt set with shape (m, 1)
         :return: parameter w
         """
         # 负类

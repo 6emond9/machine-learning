@@ -47,7 +47,7 @@ class LogisticRegression:
     def predict01(self, data, beta):
         """
         根据已有的数据和参数模型作预测
-        :param data: data array
+        :param data: data_6_2.txt array
         :param beta: parameter β
         :return: predict label -> 0, 1
         """
@@ -59,7 +59,7 @@ class LogisticRegression:
     def predict12(self, data, beta):
         """
         根据已有的数据和参数模型作预测
-        :param data: data array
+        :param data: data_6_2.txt array
         :param beta: parameter β
         :return: predict label -> 1, 2
         """
@@ -87,7 +87,7 @@ class LogisticRegression:
         """
         牛顿法计算对率回归参数β
         :param data_array: input feature array with shape (m, n)
-        :param label_array: the label of data set with shape (m, 1)
+        :param label_array: the label of data_6_2.txt set with shape (m, 1)
         :return: returns the parameters obtained by newton method
         """
         m, n = data_array.shape
@@ -126,7 +126,7 @@ class LogisticRegression:
         """
         梯度下降法计算对率回归参数β
         :param data_array: input feature array with shape (m, n)
-        :param label_array: the label of data set with shape (m, 1)
+        :param label_array: the label of data_6_2.txt set with shape (m, 1)
         :return: returns the parameters obtained by newton method
         """
         m, n = data_array.shape
